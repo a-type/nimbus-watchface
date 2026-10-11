@@ -1,7 +1,6 @@
-# app
+# Nimbus Watchface
 
-A Pebble Alloy project — embedded JavaScript on the watch, powered by Moddable
-XS, alongside C.
+A native Pebble C watchface for emery and gabbro.
 
 ## Building & running
 
@@ -19,10 +18,9 @@ Alloy targets the modern Pebble hardware: **emery** (Pebble Time 2) and
 ## Project layout
 
 ```
-src/c/mdbl.c                   C glue around the Moddable runtime
-src/embeddedjs/main.js         JavaScript that runs on the watch
-src/embeddedjs/manifest.json   Moddable manifest
-src/pkjs/index.js              PebbleKit JS (phone-side) code
+src/c/main.c                   Native app lifecycle and clock display
+src/c/cloud.c                  Fractal geometry and scanline cloud renderer
+src/c/cloud.h                  Cloud renderer interface
 package.json                   Project metadata (UUID, platforms, resources)
 wscript                        Build rules — usually no need to edit
 ```
@@ -31,36 +29,11 @@ wscript                        Build rules — usually no need to edit
 
 Full SDK docs and tutorials: <https://developer.repebble.com>
 
-## Cloud renderer
+## Cloud rendering
 
-`src/embeddedjs/cloud.js` adapts the reference fractal cloud to Poco using
-dithered shading and scanline rectangle fills. It omits the extra contour-lobe
-pass and retains only the main cloud outline. The complete cloud is uniformly
-scaled to fit the requested area with a small margin.
-
-Prepare once, then draw inside an existing Poco `begin()` / `end()` frame:
-
-```js
-import { createCloud } from 'cloud';
-
-const cloud = createCloud(render.width, render.height, { seed: 42 });
-render.begin();
-cloud.draw(render);
-render.end();
-```
-
-`drawCloud(render, options)` prepares and draws in one call. Its optional
-`x`, `y`, `width`, and `height` select a rectangular region within the renderer.
-`createCloud(width, height, options)` returns a reusable image with `draw(render,
-x, y)` and fitted `left`, `top`, `right`, and `bottom` bounds. Transparent pixels
-leave the existing background untouched. Neither API starts or ends a frame.
-
-Options include `seed`, `sizeMultiplier`, `floor`, and `rootCenterX` for source
-geometry, plus `debug` for lobe outlines. `cloudFill`, `cloudOutline`,
-`shadowColor`, and `cloudOutline` accept Poco colors from `render.makeColor()`,
-not CSS strings. The defaults are white, gray, and black.
-
-The cached image uses two bits per pixel in one packed buffer. Temporary lobe
-geometry is released after preparation, so prepare outside repeated draw events.
-Run the renderer tests with `node --test test/cloud.test.mjs` and build with
-`pnpm build` (uses the Docker SDK on this host).
+The cloud geometry is generated once in C and stored in a fixed-size lobe array.
+Each frame is rasterized directly into five scanline buffers so a two-pixel
+outline can be drawn without allocating a full-screen bitmap or using the XS
+heap. Shading remains dithered. Build with `pnpm build` using the Docker SDK on
+this host. Run `pnpm test` for JavaScript reference checks and a host-side C
+renderer check.

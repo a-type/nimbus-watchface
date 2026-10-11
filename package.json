@@ -6,6 +6,7 @@
 		"pebble": "./scripts/pebble",
 		"build": "pnpm pebble build",
 		"start": "pnpm pebble install --emulator gabbro",
+		"test": "node --test test/cloud.test.mjs && cc -std=c99 -Wall -Wextra -Itest/native -Isrc/c src/c/cloud.c test/native/cloud_test.c -lm -o /tmp/nimbus-cloud-test && /tmp/nimbus-cloud-test",
 		"sdk-image": "docker build --platform linux/amd64 -t nimbus-watchface-sdk ."
 	},
 	"keywords": [
@@ -16,9 +17,7 @@
 	"pebble": {
 		"displayName": "Nimbus",
 		"uuid": "6abac4ae-f60b-406d-97ce-fdcdabf7793c",
-		"projectType": "moddable",
 		"sdkVersion": "3",
-		"enableMultiJS": true,
 		"targetPlatforms": [
 			"emery",
 			"gabbro"
