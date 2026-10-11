@@ -244,6 +244,8 @@ static void draw_scanline(GContext *context, int16_t y) {
 
 void cloud_draw(GContext *context) {
 	if (!s_ready) return;
+	memset(s_scanlines[3], 0, s_width);
+	memset(s_scanlines[4], 0, s_width);
 	for (int16_t y = 0; y < s_height + 2; y++) {
 		uint8_t *row = s_scanlines[y % CLOUD_SCANLINE_COUNT];
 		if (y < s_height) render_scanline(y, row);
