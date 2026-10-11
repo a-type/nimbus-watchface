@@ -7,8 +7,8 @@
 
 #include "cloud.h"
 
-#define CLOUD_GENERATIONS 3
-#define CLOUD_LOBE_COUNT 156
+#define CLOUD_GENERATIONS 4
+#define CLOUD_LOBE_COUNT 781
 #define CLOUD_MAX_WIDTH 260
 #define CLOUD_SCANLINE_COUNT 5
 
@@ -20,8 +20,8 @@ typedef struct {
 	float heading;
 } CloudLobe;
 
-static const uint16_t s_depth_starts[] = {0, 1, 6, 31};
-static const uint16_t s_depth_ends[] = {1, 6, 31, 156};
+static const uint16_t s_depth_starts[] = {0, 1, 6, 31, 156};
+static const uint16_t s_depth_ends[] = {1, 6, 31, 156, 781};
 static const float s_root_headings[] = {-1.57f, -0.12f, 3.02f, -2.26f, -0.78f};
 static CloudLobe s_lobes[CLOUD_LOBE_COUNT];
 static bool s_lobe_shaded[CLOUD_LOBE_COUNT];
@@ -150,7 +150,7 @@ bool cloud_init(int16_t width, int16_t height) {
 	fit_lobes(width, height);
 	s_random_state = 43;
 	memset(s_lobe_shaded, 0, sizeof(s_lobe_shaded));
-	for (uint16_t i = s_depth_starts[CLOUD_GENERATIONS]; i < s_depth_ends[CLOUD_GENERATIONS]; i++) {
+	for (uint16_t i = s_depth_starts[CLOUD_GENERATIONS - 1]; i < s_depth_ends[CLOUD_GENERATIONS]; i++) {
 		s_lobe_shaded[i] = random_unit() < (2.0f / 3.0f);
 	}
 	s_ready = true;

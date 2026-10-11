@@ -9,7 +9,7 @@ static bool s_logged_first_draw;
 
 static void draw_watchface(Layer *layer, GContext *context) {
 	const GRect bounds = layer_get_bounds(layer);
-	graphics_context_set_fill_color(context, GColorWhite);
+	graphics_context_set_fill_color(context, GColorFromRGB(173, 216, 230));
 	graphics_fill_rect(context, bounds, 0, GCornerNone);
 	if (s_cloud_ready) {
 		if (!s_logged_first_draw) APP_LOG(APP_LOG_LEVEL_INFO, "cloud draw started");
