@@ -34,13 +34,14 @@ Full SDK docs and tutorials: <https://developer.repebble.com>
 ## Cloud renderer
 
 `src/embeddedjs/cloud.js` adapts the reference fractal cloud to Poco using
-packed pixel masks, dithered shading, and scanline rectangle fills. The complete
-cloud is uniformly scaled to fit the requested area with a small margin.
+dithered shading and scanline rectangle fills. It omits the extra contour-lobe
+pass and retains only the main cloud outline. The complete cloud is uniformly
+scaled to fit the requested area with a small margin.
 
 Prepare once, then draw inside an existing Poco `begin()` / `end()` frame:
 
 ```js
-import { createCloud } from "cloud";
+import { createCloud } from 'cloud';
 
 const cloud = createCloud(render.width, render.height, { seed: 42 });
 render.begin();
@@ -56,10 +57,10 @@ leave the existing background untouched. Neither API starts or ends a frame.
 
 Options include `seed`, `sizeMultiplier`, `floor`, and `rootCenterX` for source
 geometry, plus `debug` for lobe outlines. `cloudFill`, `cloudOutline`,
-`shadowColor`, and `innerOutline` accept Poco colors from `render.makeColor()`,
-not CSS strings. The defaults are white, black, gray, and dark gray.
+`shadowColor`, and `cloudOutline` accept Poco colors from `render.makeColor()`,
+not CSS strings. The defaults are white, gray, and black.
 
-The cached image uses half a byte per pixel; preparation also allocates two
-one-bit masks and temporary lobe geometry. Prepare outside repeated draw events.
+The cached image uses two bits per pixel in one packed buffer. Temporary lobe
+geometry is released after preparation, so prepare outside repeated draw events.
 Run the renderer tests with `node --test test/cloud.test.mjs` and build with
 `pnpm build` (uses the Docker SDK on this host).
