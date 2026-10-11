@@ -13,6 +13,9 @@ function randomBetween(random, minimum, maximum) {
 	return minimum + random() * (maximum - minimum);
 }
 
+const LOBE_DEPTH_STARTS = [0, 1, 6, 31];
+const LOBE_DEPTH_ENDS = [1, 6, 31, 156];
+
 export function verticalShapeInfluence(
 	originY,
 	floor,
@@ -41,7 +44,7 @@ export function verticalShapeInfluence(
 	);
 }
 
-export function fractalCloudLobes(
+function generateCloudLobeData(
 	width,
 	height,
 	floor,
@@ -52,103 +55,148 @@ export function fractalCloudLobes(
 		options.sizeMultiplier === undefined ? 1 : options.sizeMultiplier;
 	const random = randomGenerator(options.seed);
 	const radius = Math.round(Math.min(width, height) * 0.25 * size);
-	const root = {
-		centerX: Math.round(rootCenterX == null ? width * 0.48 : rootCenterX),
-		centerY: floor - radius,
-		radiusX: radius,
-		radiusY: radius,
-		depth: 0,
-		heading: -1.57,
-	};
-	const lobes = [root];
-	let frontier = [root];
+	const positions = new Float32Array(LOBE_DEPTH_ENDS[3] * 4);
+	const headings = new Float64Array(LOBE_DEPTH_ENDS[3]);
+	positions[0] = Math.round(rootCenterX == null ? width * 0.48 : rootCenterX);
+	positions[1] = floor - radius;
+	positions[2] = radius;
+	positions[3] = radius;
+	headings[0] = -1.57;
 	const rootHeadings = [-1.57, -0.12, 3.02, -2.26, -0.78];
-	const headings = new Array(5);
+	const branchHeadings = new Array(5);
 	for (let depth = 1; depth <= 3; depth += 1) {
-		const next = [];
-		for (const parent of frontier) {
-			const directions = depth === 1 ? rootHeadings : headings;
+		let childIndex = LOBE_DEPTH_STARTS[depth];
+		for (
+			let parentIndex = LOBE_DEPTH_STARTS[depth - 1];
+			parentIndex < LOBE_DEPTH_ENDS[depth - 1];
+			parentIndex += 1
+		) {
+			const parentOffset = parentIndex * 4;
+			const parentX = positions[parentOffset];
+			const parentY = positions[parentOffset + 1];
+			const parentRadiusX = positions[parentOffset + 2];
+			const parentRadiusY = positions[parentOffset + 3];
 			if (depth !== 1) {
 				for (let branch = 0; branch < 5; branch += 1) {
-					headings[branch] = randomBetween(
+					branchHeadings[branch] = randomBetween(
 						random,
-						parent.heading - 0.64,
-						parent.heading + 0.64,
+						headings[parentIndex] - 0.64,
+						headings[parentIndex] + 0.64,
 					);
 				}
 			}
-			for (const direction of directions) {
+			for (let branch = 0; branch < 5; branch += 1) {
+				const direction =
+					depth === 1 ? rootHeadings[branch] : branchHeadings[branch];
 				const turbulence = randomBetween(random, -1, 1);
 				const scale = randomBetween(random, 0.39, 0.53);
-				const originX = depth === 1 ? root.centerX : parent.centerX;
-				const originY = depth === 1 ? floor : parent.centerY;
+				const originX = depth === 1 ? positions[0] : parentX;
+				const originY = depth === 1 ? floor : parentY;
 				const cosine = Math.cos(direction);
 				const upwardness = Math.max(0, -Math.sin(direction));
-				const projectedX = originX + cosine * parent.radiusX * 0.6;
+				const projectedX = originX + cosine * parentRadiusX * 0.6;
 				const alignment = Math.max(
 					0,
-					1 - Math.abs(projectedX - root.centerX) / (width * 0.38),
+					1 - Math.abs(projectedX - positions[0]) / (width * 0.38),
 				);
 				const velocity =
 					0.32 + 0.68 * alignment * upwardness * (depth === 1 ? 0.55 : 1);
 				const branchScale = (0.32 + 0.4 * velocity) * scale * 1.7 * 1.42 * size;
-				const radiusX = Math.max(8, Math.round(parent.radiusX * branchScale));
-				const radiusY = Math.max(7, Math.round(parent.radiusY * branchScale));
+				const radiusX = Math.max(8, Math.round(parentRadiusX * branchScale));
+				const radiusY = Math.max(7, Math.round(parentRadiusY * branchScale));
 				const lateralness = Math.abs(cosine);
 				const reach =
-					parent.radiusX *
+					parentRadiusX *
 					(0.55 + 0.66 * lateralness + turbulence * 0.06) *
 					1.42;
 				const lift =
-					parent.radiusY *
+					parentRadiusY *
 					velocity *
 					(0.72 + turbulence * 0.05) *
 					(1.15 + 0.55 * upwardness);
 				const settling =
-					parent.radiusY * (1 - velocity) * (0.36 + turbulence * 0.04);
+					parentRadiusY * (1 - velocity) * (0.36 + turbulence * 0.04);
 				const influence = verticalShapeInfluence(
 					originY,
 					floor,
 					height,
-					parent.radiusY,
+					parentRadiusY,
 					lateralness,
 					1.42,
 					0.5,
 					0.58,
 					0.18,
 				);
-				const child = {
-					centerX: Math.max(radiusX, Math.round(originX + cosine * reach)),
-					centerY: Math.min(
-						floor - radiusY,
-						Math.round(originY - lift + settling + influence),
-					),
+				const childOffset = childIndex * 4;
+				positions[childOffset] = Math.max(
 					radiusX,
-					radiusY,
-					depth,
-					heading: direction,
-				};
-				lobes.push(child);
-				next.push(child);
+					Math.round(originX + cosine * reach),
+				);
+				positions[childOffset + 1] = Math.min(
+					floor - radiusY,
+					Math.round(originY - lift + settling + influence),
+				);
+				positions[childOffset + 2] = radiusX;
+				positions[childOffset + 3] = radiusY;
+				headings[childIndex] = direction;
+				childIndex += 1;
 			}
 		}
-		frontier = next;
+	}
+	return { positions, headings };
+}
+
+export function fractalCloudLobes(
+	width,
+	height,
+	floor,
+	rootCenterX,
+	options = {},
+) {
+	const data = generateCloudLobeData(
+		width,
+		height,
+		floor,
+		rootCenterX,
+		options,
+	);
+	const lobes = new Array(LOBE_DEPTH_ENDS[3]);
+	for (let depth = 0; depth <= 3; depth += 1) {
+		for (
+			let index = LOBE_DEPTH_STARTS[depth];
+			index < LOBE_DEPTH_ENDS[depth];
+			index += 1
+		) {
+			const offset = index * 4;
+			lobes[index] = {
+				centerX: data.positions[offset],
+				centerY: data.positions[offset + 1],
+				radiusX: data.positions[offset + 2],
+				radiusY: data.positions[offset + 3],
+				depth,
+				heading: data.headings[index],
+			};
+		}
 	}
 	return lobes;
 }
 
-function ellipsePixels(width, height, lobe, visit) {
-	const top = Math.max(0, Math.ceil(lobe.centerY - lobe.radiusY - 0.5));
-	const bottom = Math.min(
-		height - 1,
-		Math.floor(lobe.centerY + lobe.radiusY - 0.5),
-	);
+function ellipsePixels(
+	width,
+	height,
+	centerX,
+	centerY,
+	radiusX,
+	radiusY,
+	visit,
+) {
+	const top = Math.max(0, Math.ceil(centerY - radiusY - 0.5));
+	const bottom = Math.min(height - 1, Math.floor(centerY + radiusY - 0.5));
 	for (let row = top; row <= bottom; row += 1) {
-		const relativeY = (row + 0.5 - lobe.centerY) / lobe.radiusY;
-		const reach =
-			lobe.radiusX * Math.sqrt(Math.max(0, 1 - relativeY * relativeY));
-		const left = Math.max(0, Math.ceil(lobe.centerX - reach - 0.5));
-		const right = Math.min(width - 1, Math.floor(lobe.centerX + reach - 0.5));
+		const relativeY = (row + 0.5 - centerY) / radiusY;
+		const reach = radiusX * Math.sqrt(Math.max(0, 1 - relativeY * relativeY));
+		const left = Math.max(0, Math.ceil(centerX - reach - 0.5));
+		const right = Math.min(width - 1, Math.floor(centerX + reach - 0.5));
 		for (let column = left; column <= right; column += 1) {
 			visit(row * width + column, column, row);
 		}
@@ -181,14 +229,22 @@ export function createCloud(width, height, options = {}) {
 	if (!Number.isFinite(floor) || !Number.isFinite(rootCenterX)) {
 		throw new RangeError('Cloud floor and rootCenterX must be finite');
 	}
-	const lobes = fractalCloudLobes(width, height, floor, rootCenterX, options);
+	const positions = generateCloudLobeData(
+		width,
+		height,
+		floor,
+		rootCenterX,
+		options,
+	).positions;
+	const lobeCount = LOBE_DEPTH_ENDS[3];
 	let left = Infinity;
 	let top = floor - 38;
 	let right = -Infinity;
-	for (const lobe of lobes) {
-		left = Math.min(left, lobe.centerX - lobe.radiusX);
-		top = Math.min(top, lobe.centerY - lobe.radiusY);
-		right = Math.max(right, lobe.centerX + lobe.radiusX);
+	for (let index = 0; index < lobeCount; index += 1) {
+		const offset = index * 4;
+		left = Math.min(left, positions[offset] - positions[offset + 2]);
+		top = Math.min(top, positions[offset + 1] - positions[offset + 3]);
+		right = Math.max(right, positions[offset] + positions[offset + 2]);
 	}
 	const margin = Math.min(4, (width - 1) / 2, (height - 1) / 2);
 	const fit = Math.min(
@@ -198,11 +254,12 @@ export function createCloud(width, height, options = {}) {
 	);
 	const offsetX = (width - (right - left) * fit) / 2;
 	const offsetY = height - margin - (floor - top) * fit;
-	for (const lobe of lobes) {
-		lobe.centerX = offsetX + (lobe.centerX - left) * fit;
-		lobe.centerY = offsetY + (lobe.centerY - top) * fit;
-		lobe.radiusX *= fit;
-		lobe.radiusY *= fit;
+	for (let index = 0; index < lobeCount; index += 1) {
+		const offset = index * 4;
+		positions[offset] = offsetX + (positions[offset] - left) * fit;
+		positions[offset + 1] = offsetY + (positions[offset + 1] - top) * fit;
+		positions[offset + 2] *= fit;
+		positions[offset + 3] *= fit;
 	}
 	const fittedFloor = height - margin;
 	const pixels = new Uint8Array(Math.ceil((width * height) / 4));
@@ -214,11 +271,10 @@ export function createCloud(width, height, options = {}) {
 	function getPixel(index) {
 		return (pixels[index >> 2] >> ((index & 3) * 2)) & 3;
 	}
-	const root = lobes[0];
 	const baseTop = fittedFloor - 38 * fit;
-	const baseLeft = root.centerX - root.radiusX;
-	const baseRight = root.centerX + root.radiusX;
-	const corner = Math.min(18 * fit, root.radiusX, 19 * fit);
+	const baseLeft = positions[0] - positions[2];
+	const baseRight = positions[0] + positions[2];
+	const corner = Math.min(18 * fit, positions[2], 19 * fit);
 	for (
 		let row = Math.max(0, Math.floor(baseTop));
 		row < Math.min(height, Math.ceil(fittedFloor));
@@ -252,32 +308,57 @@ export function createCloud(width, height, options = {}) {
 				setPixel(row * width + column, 1);
 		}
 	}
-	for (const lobe of lobes)
-		ellipsePixels(width, height, lobe, (index) => setPixel(index, 1));
-	function paintLobe(lobe, shade) {
-		const upperRadiusX =
-			Math.max(1, Math.round((lobe.radiusX / fit) * 1.08)) * fit;
-		const upperRadiusY =
-			Math.max(1, Math.round((lobe.radiusY / fit) * 0.64)) * fit;
-		const upperCenterY = lobe.centerY - lobe.radiusY + upperRadiusY;
-		ellipsePixels(width, height, lobe, (index, column, row) => {
-			if (shade) {
-				const dot =
-					(column % 4 === 0 && row % 4 === 0) ||
-					(column % 4 === 2 && row % 4 === 2);
-				setPixel(index, dot ? 2 : 1);
-			}
-			const deltaX = (column + 0.5 - lobe.centerX) / upperRadiusX;
-			const deltaY = (row + 0.5 - upperCenterY) / upperRadiusY;
-			if (deltaX * deltaX + deltaY * deltaY <= 1) setPixel(index, 1);
-		});
+	for (let index = 0; index < lobeCount; index += 1) {
+		const offset = index * 4;
+		ellipsePixels(
+			width,
+			height,
+			positions[offset],
+			positions[offset + 1],
+			positions[offset + 2],
+			positions[offset + 3],
+			(pixel) => setPixel(pixel, 1),
+		);
+	}
+	function paintLobe(lobeIndex, shade) {
+		const offset = lobeIndex * 4;
+		const centerX = positions[offset];
+		const centerY = positions[offset + 1];
+		const radiusX = positions[offset + 2];
+		const radiusY = positions[offset + 3];
+		const upperRadiusX = Math.max(1, Math.round((radiusX / fit) * 1.08)) * fit;
+		const upperRadiusY = Math.max(1, Math.round((radiusY / fit) * 0.64)) * fit;
+		const upperCenterY = centerY - radiusY + upperRadiusY;
+		ellipsePixels(
+			width,
+			height,
+			centerX,
+			centerY,
+			radiusX,
+			radiusY,
+			(index, column, row) => {
+				if (shade) {
+					const dot =
+						(column % 4 === 0 && row % 4 === 0) ||
+						(column % 4 === 2 && row % 4 === 2);
+					setPixel(index, dot ? 2 : 1);
+				}
+				const deltaX = (column + 0.5 - centerX) / upperRadiusX;
+				const deltaY = (row + 0.5 - upperCenterY) / upperRadiusY;
+				if (deltaX * deltaX + deltaY * deltaY <= 1) setPixel(index, 1);
+			},
+		);
 	}
 	const random = randomGenerator(
 		options.seed == null ? undefined : Number(options.seed) + 1,
 	);
 	for (let depth = 3; depth >= 0; depth -= 1) {
-		for (const lobe of lobes) {
-			if (lobe.depth === depth) paintLobe(lobe, depth >= 3 && random() < 2 / 3);
+		for (
+			let index = LOBE_DEPTH_STARTS[depth];
+			index < LOBE_DEPTH_ENDS[depth];
+			index += 1
+		) {
+			paintLobe(index, depth >= 3 && random() < 2 / 3);
 		}
 	}
 	const outlineLeft = Math.max(0, Math.floor(offsetX) - 2);
@@ -321,17 +402,27 @@ export function createCloud(width, height, options = {}) {
 	}
 	outlineSurface(2);
 	if (options.debug) {
-		for (const lobe of lobes) {
-			ellipsePixels(width, height, lobe, (index, column, row) => {
-				const deltaX =
-					(column + 0.5 - lobe.centerX) / Math.max(0.01, lobe.radiusX - 1);
-				const deltaY =
-					(row + 0.5 - lobe.centerY) / Math.max(0.01, lobe.radiusY - 1);
-				if (deltaX * deltaX + deltaY * deltaY >= 1) setPixel(index, 3);
-			});
+		for (let index = 0; index < lobeCount; index += 1) {
+			const offset = index * 4;
+			const centerX = positions[offset];
+			const centerY = positions[offset + 1];
+			const radiusX = positions[offset + 2];
+			const radiusY = positions[offset + 3];
+			ellipsePixels(
+				width,
+				height,
+				centerX,
+				centerY,
+				radiusX,
+				radiusY,
+				(index, column, row) => {
+					const deltaX = (column + 0.5 - centerX) / Math.max(0.01, radiusX - 1);
+					const deltaY = (row + 0.5 - centerY) / Math.max(0.01, radiusY - 1);
+					if (deltaX * deltaX + deltaY * deltaY >= 1) setPixel(index, 3);
+				},
+			);
 		}
 	}
-	lobes.length = 0;
 	let palette;
 	return {
 		width,

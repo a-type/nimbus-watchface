@@ -74,6 +74,7 @@ test('cached drawing is repeatable and supports an offset region and Poco colors
 	assert.deepEqual(first.calls, second.calls);
 	assert.ok(first.calls.some((call) => call[0] === 123));
 	assert.ok(first.calls.some((call) => call[0] === 456));
+	assert.ok(first.calls.some((call) => call[0] === 0));
 	assert.ok(!first.calls.some((call) => call[0] === 0x323232));
 	assert.throws(() => cloud.draw(first, 150, 0), RangeError);
 });
