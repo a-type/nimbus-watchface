@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+workspace_root="$(dirname "$(dirname "$(readlink -f "$0")")")"
+container_workspace="/workspace/$(basename "$workspace_root")"
+terminal_flags=()
+if [[ -t 0 && -t 1 ]]; then
+  terminal_flags=(-it)
+fi
+
+exec docker run --rm --platform linux/amd64 \
+  "${terminal_flags[@]}" \
+  --user "$(id -u):$(id -g)" \
+  --workdir "$container_workspace" \
+  --mount "type=bind,source=$workspace_root,target=$container_workspace" \
+  nimbus-watchface-sdk "$@"

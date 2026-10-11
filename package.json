@@ -1,0 +1,34 @@
+{
+	"name": "nimbus-watchface",
+	"author": "Grant Forrest",
+	"version": "1.0.0",
+	"scripts": {
+		"pebble": "./scripts/pebble",
+		"build": "pnpm pebble build",
+		"start": "pnpm pebble install --emulator gabbro",
+		"sdk-image": "docker build --platform linux/amd64 -t nimbus-watchface-sdk ."
+	},
+	"keywords": [
+		"pebble-app"
+	],
+	"private": true,
+	"dependencies": {},
+	"pebble": {
+		"displayName": "Nimbus",
+		"uuid": "6abac4ae-f60b-406d-97ce-fdcdabf7793c",
+		"projectType": "moddable",
+		"sdkVersion": "3",
+		"enableMultiJS": true,
+		"targetPlatforms": [
+			"emery",
+			"gabbro"
+		],
+		"watchapp": {
+			"watchface": true
+		},
+		"messageKeys": [],
+		"resources": {
+			"media": []
+		}
+	}
+}
