@@ -64,7 +64,7 @@ export function fractalCloudLobes(
 	let frontier = [root];
 	const rootHeadings = [-1.57, -0.12, 3.02, -2.26, -0.78];
 	const headings = new Array(5);
-	for (let depth = 1; depth <= 4; depth += 1) {
+	for (let depth = 1; depth <= 3; depth += 1) {
 		const next = [];
 		for (const parent of frontier) {
 			const directions = depth === 1 ? rootHeadings : headings;
@@ -275,7 +275,7 @@ export function createCloud(width, height, options = {}) {
 	const random = randomGenerator(
 		options.seed == null ? undefined : Number(options.seed) + 1,
 	);
-	for (let depth = 4; depth >= 0; depth -= 1) {
+	for (let depth = 3; depth >= 0; depth -= 1) {
 		for (const lobe of lobes) {
 			if (lobe.depth === depth) paintLobe(lobe, depth >= 3 && random() < 2 / 3);
 		}

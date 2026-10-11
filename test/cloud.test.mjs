@@ -28,9 +28,9 @@ function renderer(width, height) {
 	};
 }
 
-test('reference generation remains deterministic with four five-way generations', () => {
+test('reference generation remains deterministic with three five-way generations', () => {
 	const lobes = fractalCloudLobes(200, 228, 223, 96, { seed: 42 });
-	assert.equal(lobes.length, 781);
+	assert.equal(lobes.length, 156);
 	assert.deepEqual(lobes, fractalCloudLobes(200, 228, 223, 96, { seed: 42 }));
 	assert.deepEqual(lobes[0], {
 		centerX: 96,
