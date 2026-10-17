@@ -9,8 +9,16 @@ static bool s_logged_first_draw;
 
 static void draw_watchface(Layer *layer, GContext *context) {
 	const GRect bounds = layer_get_bounds(layer);
+	const int16_t screen_size = bounds.size.w < bounds.size.h ? bounds.size.w : bounds.size.h;
+	const int16_t sun_diameter = screen_size / 3;
+	const GPoint sun_center = GPoint(
+		bounds.origin.x + bounds.size.w / 2,
+		bounds.origin.y + bounds.size.h / 2
+	);
 	graphics_context_set_fill_color(context, GColorFromRGB(173, 216, 230));
 	graphics_fill_rect(context, bounds, 0, GCornerNone);
+	graphics_context_set_fill_color(context, GColorFromRGB(255, 220, 0));
+	graphics_fill_circle(context, sun_center, sun_diameter / 2);
 	if (s_cloud_ready) {
 		if (!s_logged_first_draw) APP_LOG(APP_LOG_LEVEL_INFO, "cloud draw started");
 		cloud_draw(context);
@@ -34,18 +42,23 @@ static void draw_watchface(Layer *layer, GContext *context) {
 
 	char time_text[16];
 	clock_copy_time_string(time_text, sizeof(time_text));
-	const GFont font = fonts_get_system_font(FONT_KEY_BITHAM_30_BLACK);
+	const GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 	const GSize text_size = graphics_text_layout_get_content_size(
 		time_text,
 		font,
-		bounds,
+		GRect(
+			sun_center.x - sun_diameter / 2,
+			sun_center.y - sun_diameter / 2,
+			sun_diameter,
+			sun_diameter
+		),
 		GTextOverflowModeWordWrap,
 		GTextAlignmentCenter
 	);
 	const GRect text_bounds = GRect(
-		bounds.origin.x,
-		bounds.origin.y + (bounds.size.h - text_size.h) / 2,
-		bounds.size.w,
+		sun_center.x - text_size.w / 2,
+		sun_center.y - text_size.h / 2,
+		text_size.w,
 		text_size.h
 	);
 	graphics_context_set_text_color(context, GColorBlack);
