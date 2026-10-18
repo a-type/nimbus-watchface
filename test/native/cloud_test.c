@@ -37,7 +37,7 @@ void graphics_fill_rect(GContext *context, GRect rect, uint16_t radius, uint8_t 
 	else if (s_color == GColorFromRGB(80, 80, 80)) s_color_calls[1]++;
 	else if (s_color == GColorBlack) s_color_calls[2]++;
 	else if (s_color == GColorFromRGB(50, 50, 50)) s_color_calls[3]++;
-	else if (s_color == GColorFromRGB(192, 192, 192)) s_color_calls[4]++;
+	else if (s_color == GColorFromRGB(96, 96, 96)) s_color_calls[4]++;
 }
 
 static void clear_output(void) {
