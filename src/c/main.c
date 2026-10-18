@@ -28,9 +28,8 @@ static void draw_ray_segment(GContext *context, GPoint start, GPoint endpoint, G
 	graphics_fill_circle(context, endpoint, cap_radius);
 }
 
-static void draw_ray(GContext *context, GPoint center, float angle, int16_t sun_radius, int16_t end_radius, uint8_t thickness) {
+static void draw_ray(GContext *context, GPoint center, float angle, int16_t start_radius, int16_t end_radius, uint8_t thickness) {
 	const int16_t outline_thickness = thickness + 2;
-	const int16_t start_radius = sun_radius + outline_thickness / 2 + 1;
 	const GPoint start = GPoint(
 		center.x + (int16_t)(cosf(angle) * start_radius),
 		center.y + (int16_t)(sinf(angle) * start_radius)
@@ -47,7 +46,9 @@ static void draw_analog_clock(GContext *context, GRect bounds, GPoint center, in
 	const int16_t screen_size = bounds.size.w < bounds.size.h ? bounds.size.w : bounds.size.h;
 	const int16_t numeral_radius = screen_size / 2 - 14;
 	const int16_t minute_hand_radius = sun_radius + (numeral_radius - sun_radius) / 2;
-	const int16_t hour_hand_radius = sun_radius + (minute_hand_radius - sun_radius) * 3 / 4;
+	const int16_t hand_gap = screen_size / 24;
+	const int16_t hand_start_radius = sun_radius + (5 + 2) / 2 + 1 + hand_gap;
+	const int16_t hour_hand_radius = hand_start_radius + (minute_hand_radius - hand_start_radius) * 2 / 3;
 	const GFont numeral_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
 	const float pi = 3.14159265f;
 	graphics_context_set_text_color(context, GColorBlack);
@@ -73,8 +74,8 @@ static void draw_analog_clock(GContext *context, GRect bounds, GPoint center, in
 	const float minute_angle = (float)s_current_time.tm_min * (2.0f * pi / 60.0f) - pi / 2.0f;
 	const float hour_angle = ((float)(s_current_time.tm_hour % 12) + (float)s_current_time.tm_min / 60.0f) *
 		(2.0f * pi / 12.0f) - pi / 2.0f;
-	draw_ray(context, center, hour_angle, sun_radius, hour_hand_radius, 5);
-	draw_ray(context, center, minute_angle, sun_radius, minute_hand_radius, 4);
+	draw_ray(context, center, hour_angle, hand_start_radius, hour_hand_radius, 5);
+	draw_ray(context, center, minute_angle, hand_start_radius, minute_hand_radius, 4);
 }
 
 static void draw_watchface(Layer *layer, GContext *context) {
