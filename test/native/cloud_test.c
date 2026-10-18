@@ -12,7 +12,7 @@
 static GColor s_pixels[TEST_HEIGHT][TEST_WIDTH];
 static GColor s_color;
 static uint32_t s_draw_calls;
-static uint32_t s_color_calls[4];
+static uint32_t s_color_calls[5];
 static bool s_out_of_bounds;
 
 void graphics_context_set_fill_color(GContext *context, GColor color) {
@@ -37,6 +37,7 @@ void graphics_fill_rect(GContext *context, GRect rect, uint16_t radius, uint8_t 
 	else if (s_color == GColorFromRGB(80, 80, 80)) s_color_calls[1]++;
 	else if (s_color == GColorBlack) s_color_calls[2]++;
 	else if (s_color == GColorFromRGB(50, 50, 50)) s_color_calls[3]++;
+	else if (s_color == GColorFromRGB(192, 192, 192)) s_color_calls[4]++;
 }
 
 static void clear_output(void) {
@@ -50,6 +51,7 @@ static void clear_output(void) {
 static void verify_renderer(int16_t width, int16_t height, uint32_t seed) {
 	GContext context = {0};
 	GColor expected[TEST_HEIGHT][TEST_WIDTH];
+	cloud_set_shadow_dither(true);
 	clear_output();
 	assert(cloud_init(width, height, seed));
 	cloud_draw(&context);
@@ -72,6 +74,16 @@ static void verify_renderer(int16_t width, int16_t height, uint32_t seed) {
 	cloud_draw(&context);
 	assert(!s_out_of_bounds);
 	assert(memcmp(expected, s_pixels, sizeof(expected)) != 0);
+
+	cloud_set_shadow_dither(false);
+	clear_output();
+	assert(cloud_init(width, height, seed));
+	cloud_draw(&context);
+	assert(!s_out_of_bounds);
+	assert(s_color_calls[1] == 0);
+	assert(s_color_calls[4] > 0);
+	assert(memcmp(expected, s_pixels, sizeof(expected)) != 0);
+	cloud_set_shadow_dither(true);
 }
 
 int main(void) {

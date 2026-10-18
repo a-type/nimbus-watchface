@@ -5,7 +5,14 @@ var configUrl = 'https://a-type.github.io/nimbus-watchface/config.html';
 
 Pebble.addEventListener('showConfiguration', function () {
 	var analogMode = localStorage.getItem('analog_mode') === 'true';
-	Pebble.openURL(configUrl + '?analog_mode=' + (analogMode ? '1' : '0'));
+	var shadowDither = localStorage.getItem('shadow_dither') !== 'false';
+	Pebble.openURL(
+		configUrl +
+			'?analog_mode=' +
+			(analogMode ? '1' : '0') +
+			'&shadow_dither=' +
+			(shadowDither ? '1' : '0')
+	);
 });
 
 Pebble.addEventListener('webviewclosed', function (event) {
@@ -19,13 +26,16 @@ Pebble.addEventListener('webviewclosed', function (event) {
 		return;
 	}
 	if (typeof configData.analog_mode !== 'boolean') return;
+	var shadowDither = configData.shadow_dither !== false;
 
 	localStorage.setItem(
 		'analog_mode',
 		configData.analog_mode ? 'true' : 'false'
 	);
+	localStorage.setItem('shadow_dither', shadowDither ? 'true' : 'false');
 	var message = {};
 	message[messageKeys.ANALOG_MODE] = configData.analog_mode ? 1 : 0;
+	message[messageKeys.SHADOW_DITHER] = shadowDither ? 1 : 0;
 	var onMessageSent = function () {
 		console.log('Watchface settings sent');
 	};

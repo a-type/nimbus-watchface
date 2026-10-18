@@ -8,15 +8,18 @@
 #include "cloud.h"
 
 #define PERSIST_KEY_ANALOG_MODE 0
+#define PERSIST_KEY_SHADOW_DITHER 1
 #define APP_MESSAGE_BUFFER_SIZE 64
 
 extern uint32_t MESSAGE_KEY_ANALOG_MODE;
+extern uint32_t MESSAGE_KEY_SHADOW_DITHER;
 
 static Window *s_main_window;
 static Layer *s_watch_layer;
 static bool s_cloud_ready;
 static bool s_logged_first_draw;
 static bool s_analog_mode;
+static bool s_shadow_dither = true;
 static struct tm s_current_time;
 
 static uint32_t cloud_seed_for_date(const struct tm *date) {
@@ -178,11 +181,21 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
 
 static void inbox_received_handler(DictionaryIterator *iterator, void *context) {
 	(void)context;
-	const Tuple *mode_tuple = dict_find(iterator, MESSAGE_KEY_ANALOG_MODE);
-	if (!mode_tuple) return;
-	s_analog_mode = mode_tuple->value->int32 != 0;
-	persist_write_bool(PERSIST_KEY_ANALOG_MODE, s_analog_mode);
-	if (s_watch_layer) layer_mark_dirty(s_watch_layer);
+	bool updated = false;
+	const Tuple *analog_tuple = dict_find(iterator, MESSAGE_KEY_ANALOG_MODE);
+	if (analog_tuple) {
+		s_analog_mode = analog_tuple->value->int32 != 0;
+		persist_write_bool(PERSIST_KEY_ANALOG_MODE, s_analog_mode);
+		updated = true;
+	}
+	const Tuple *shadow_tuple = dict_find(iterator, MESSAGE_KEY_SHADOW_DITHER);
+	if (shadow_tuple) {
+		s_shadow_dither = shadow_tuple->value->int32 != 0;
+		persist_write_bool(PERSIST_KEY_SHADOW_DITHER, s_shadow_dither);
+		cloud_set_shadow_dither(s_shadow_dither);
+		updated = true;
+	}
+	if (updated && s_watch_layer) layer_mark_dirty(s_watch_layer);
 }
 
 static void main_window_load(Window *window) {
@@ -213,6 +226,9 @@ int main(void) {
 	APP_LOG(APP_LOG_LEVEL_INFO, "native watchface main entered");
 	s_analog_mode = persist_exists(PERSIST_KEY_ANALOG_MODE) &&
 		persist_read_bool(PERSIST_KEY_ANALOG_MODE);
+	s_shadow_dither = !persist_exists(PERSIST_KEY_SHADOW_DITHER) ||
+		persist_read_bool(PERSIST_KEY_SHADOW_DITHER);
+	cloud_set_shadow_dither(s_shadow_dither);
 	time_t now = time(NULL);
 	struct tm *current_time = localtime(&now);
 	if (current_time) s_current_time = *current_time;

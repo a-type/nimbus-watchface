@@ -29,7 +29,8 @@
 		],
 		"enableMultiJS": true,
 		"messageKeys": [
-			"ANALOG_MODE"
+			"ANALOG_MODE",
+			"SHADOW_DITHER"
 		],
 		"resources": {
 			"media": []

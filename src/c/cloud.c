@@ -20,6 +20,8 @@
 #define OVERLAY_CONTOUR 0x01
 #define OVERLAY_WHITE 0x02
 #define OVERLAY_SHADOW 0x04
+#define OVERLAY_SOLID_SHADOW 0x08
+#define SOLID_SHADOW_COLOR 5
 
 typedef struct {
 	float x;
@@ -53,6 +55,7 @@ static float s_base_left;
 static float s_base_right;
 static float s_corner;
 static uint32_t s_random_state;
+static bool s_shadow_dither = true;
 static bool s_ready;
 
 static float random_unit(void) {
@@ -197,6 +200,10 @@ bool cloud_init(int16_t width, int16_t height, uint32_t seed) {
 	return true;
 }
 
+void cloud_set_shadow_dither(bool enabled) {
+	s_shadow_dither = enabled;
+}
+
 static void paint_ellipse_row(uint8_t *row, int16_t y, float center_x, float center_y,
 	float radius_x, float radius_y, uint8_t mode) {
 	const float relative_y = ((float)y + 0.5f - center_y) / radius_y;
@@ -207,6 +214,7 @@ static void paint_ellipse_row(uint8_t *row, int16_t y, float center_x, float cen
 	for (int16_t x = left; x <= right; x++) {
 		if (mode == 1) row[x] = 1;
 		else if (mode == 2) row[x] = ((x % 4 == 0 && y % 4 == 0) || (x % 4 == 2 && y % 4 == 2)) ? 2 : 1;
+		else if (mode == 3) row[x] = SOLID_SHADOW_COLOR;
 	}
 }
 
@@ -267,7 +275,8 @@ static void render_scanline(int16_t y, uint8_t *row) {
 		for (uint16_t i = s_depth_starts[depth]; i < s_depth_ends[depth]; i++) {
 			const CloudLobe *lobe = &s_lobes[i];
 			const bool shade = s_lobe_shaded[i];
-			if (shade) paint_ellipse_row(row, y, lobe->x, lobe->y, lobe->radius_x, lobe->radius_y, 2);
+			if (shade) paint_ellipse_row(row, y, lobe->x, lobe->y, lobe->radius_x, lobe->radius_y,
+				s_shadow_dither ? 2 : 3);
 			const float upper_radius_x = fmaxf(1.0f, floorf((lobe->radius_x / s_fit) * 1.08f + 0.5f)) * s_fit;
 			const float upper_radius_y = fmaxf(1.0f, floorf((lobe->radius_y / s_fit) * 0.64f + 0.5f)) * s_fit;
 			const float upper_center_y = lobe->y - lobe->radius_y + upper_radius_y;
@@ -289,7 +298,8 @@ static void render_scanline(int16_t y, uint8_t *row) {
 		}
 		if (!s_overlay_shaded[i]) continue;
 		paint_overlay_ellipse_row(overlay, row, y, lobe, lobe->y,
-			lobe->radius_x, lobe->radius_y, OVERLAY_SHADOW, true);
+			lobe->radius_x, lobe->radius_y,
+			s_shadow_dither ? OVERLAY_SHADOW : OVERLAY_SOLID_SHADOW, s_shadow_dither);
 		const float upper_radius_x = fmaxf(1.0f, floorf((lobe->radius_x / s_fit) * 1.08f + 0.5f)) * s_fit;
 		const float upper_radius_y = fmaxf(1.0f, floorf((lobe->radius_y / s_fit) * 0.64f + 0.5f)) * s_fit;
 		const float upper_center_y = lobe->y - lobe->radius_y + upper_radius_y;
@@ -301,7 +311,7 @@ static void render_scanline(int16_t y, uint8_t *row) {
 static bool pixel_occupied(int16_t x, int16_t y) {
 	const uint8_t base = s_scanlines[y % CLOUD_SCANLINE_COUNT][x];
 	const uint8_t overlay = s_overlay_scanlines[y % CLOUD_SCANLINE_COUNT][x];
-	return base || (overlay & (OVERLAY_CONTOUR | OVERLAY_WHITE | OVERLAY_SHADOW));
+	return base || (overlay & (OVERLAY_CONTOUR | OVERLAY_WHITE | OVERLAY_SHADOW | OVERLAY_SOLID_SHADOW));
 }
 
 static bool contour_edge(int16_t x, int16_t y) {
@@ -323,6 +333,7 @@ static uint8_t outlined_color(int16_t x, int16_t y) {
 	const uint8_t overlay = s_overlay_scanlines[y % CLOUD_SCANLINE_COUNT][x];
 	if (overlay & OVERLAY_WHITE) color = 1;
 	else if (overlay & OVERLAY_SHADOW) color = 2;
+	else if (overlay & OVERLAY_SOLID_SHADOW) color = SOLID_SHADOW_COLOR;
 	else if (overlay & OVERLAY_CONTOUR) color = contour_edge(x, y) ? 4 : 1;
 	if (!color) return 0;
 	for (int8_t dy = -1; dy <= 1; dy++) {
@@ -340,6 +351,7 @@ static GColor color_for_pixel(uint8_t color) {
 	if (color == 1) return GColorWhite;
 	if (color == 2) return GColorFromRGB(80, 80, 80);
 	if (color == 4) return GColorFromRGB(50, 50, 50);
+	if (color == SOLID_SHADOW_COLOR) return GColorFromRGB(192, 192, 192);
 	return GColorBlack;
 }
 
