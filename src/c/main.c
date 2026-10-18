@@ -45,10 +45,12 @@ static void draw_ray(GContext *context, GPoint center, float angle, int16_t star
 static void draw_analog_clock(GContext *context, GRect bounds, GPoint center, int16_t sun_radius) {
 	const int16_t screen_size = bounds.size.w < bounds.size.h ? bounds.size.w : bounds.size.h;
 	const int16_t numeral_radius = screen_size / 2 - 14;
-	const int16_t minute_hand_radius = sun_radius + (numeral_radius - sun_radius) / 2;
 	const int16_t hand_gap = screen_size / 24;
 	const int16_t hand_start_radius = sun_radius + (5 + 2) / 2 + 1 + hand_gap;
-	const int16_t hour_hand_radius = hand_start_radius + (minute_hand_radius - hand_start_radius) * 2 / 3;
+	const int16_t midpoint_radius = sun_radius + (numeral_radius - sun_radius) / 2;
+	const int16_t minute_hand_radius = hand_start_radius +
+		((midpoint_radius - hand_start_radius) * 5 + 2) / 4;
+	const int16_t hour_hand_radius = hand_start_radius + (midpoint_radius - hand_start_radius) * 2 / 3;
 	const GFont numeral_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
 	const float pi = 3.14159265f;
 	graphics_context_set_text_color(context, GColorBlack);
