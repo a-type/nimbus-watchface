@@ -1,11 +1,65 @@
 #include <pebble.h>
 
+#include <math.h>
+#include <stdio.h>
+#include <time.h>
+
 #include "cloud.h"
+
+#define PERSIST_KEY_ANALOG_MODE 0
 
 static Window *s_main_window;
 static Layer *s_watch_layer;
 static bool s_cloud_ready;
 static bool s_logged_first_draw;
+static bool s_analog_mode;
+static struct tm s_current_time;
+
+static void draw_ray(GContext *context, GPoint center, float angle, int16_t length, uint8_t thickness) {
+	const GPoint endpoint = GPoint(
+		center.x + (int16_t)(cosf(angle) * length),
+		center.y + (int16_t)(sinf(angle) * length)
+	);
+	const int16_t cap_radius = thickness / 2;
+	graphics_context_set_stroke_color(context, GColorFromRGB(255, 220, 0));
+	graphics_context_set_stroke_width(context, thickness);
+	graphics_draw_line(context, center, endpoint);
+	graphics_context_set_fill_color(context, GColorFromRGB(255, 220, 0));
+	graphics_fill_circle(context, center, cap_radius);
+	graphics_fill_circle(context, endpoint, cap_radius);
+}
+
+static void draw_analog_clock(GContext *context, GRect bounds, GPoint center) {
+	const int16_t screen_size = bounds.size.w < bounds.size.h ? bounds.size.w : bounds.size.h;
+	const int16_t numeral_radius = screen_size / 2 - 14;
+	const GFont numeral_font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+	const float pi = 3.14159265f;
+	graphics_context_set_text_color(context, GColorFromRGB(255, 220, 0));
+	for (int8_t hour = 1; hour <= 12; hour++) {
+		const float angle = (float)hour * (2.0f * pi / 12.0f) - pi / 2.0f;
+		const GPoint numeral_center = GPoint(
+			center.x + (int16_t)(cosf(angle) * numeral_radius),
+			center.y + (int16_t)(sinf(angle) * numeral_radius)
+		);
+		char numeral[3];
+		snprintf(numeral, sizeof(numeral), "%d", hour);
+		graphics_draw_text(
+			context,
+			numeral,
+			numeral_font,
+			GRect(numeral_center.x - 12, numeral_center.y - 9, 24, 18),
+			GTextOverflowModeWordWrap,
+			GTextAlignmentCenter,
+			NULL
+		);
+	}
+
+	const float minute_angle = (float)s_current_time.tm_min * (2.0f * pi / 60.0f) - pi / 2.0f;
+	const float hour_angle = ((float)(s_current_time.tm_hour % 12) + (float)s_current_time.tm_min / 60.0f) *
+		(2.0f * pi / 12.0f) - pi / 2.0f;
+	draw_ray(context, center, hour_angle, screen_size / 4, 5);
+	draw_ray(context, center, minute_angle, screen_size / 3, 4);
+}
 
 static void draw_watchface(Layer *layer, GContext *context) {
 	const GRect bounds = layer_get_bounds(layer);
@@ -38,6 +92,11 @@ static void draw_watchface(Layer *layer, GContext *context) {
 			GTextAlignmentCenter,
 			NULL
 		);
+	}
+
+	if (s_analog_mode) {
+		draw_analog_clock(context, bounds, sun_center);
+		return;
 	}
 
 	char time_text[16];
@@ -74,9 +133,22 @@ static void draw_watchface(Layer *layer, GContext *context) {
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
-	(void)tick_time;
 	(void)units_changed;
+	if (tick_time) s_current_time = *tick_time;
 	if (s_watch_layer) layer_mark_dirty(s_watch_layer);
+}
+
+static void handle_select_click(ClickRecognizerRef recognizer, void *context) {
+	(void)recognizer;
+	(void)context;
+	s_analog_mode = !s_analog_mode;
+	persist_write_bool(PERSIST_KEY_ANALOG_MODE, s_analog_mode);
+	if (s_watch_layer) layer_mark_dirty(s_watch_layer);
+}
+
+static void click_config_provider(void *context) {
+	(void)context;
+	window_single_click_subscribe(BUTTON_ID_SELECT, handle_select_click);
 }
 
 static void main_window_load(Window *window) {
@@ -90,6 +162,7 @@ static void main_window_load(Window *window) {
 		bounds.size.w,
 		bounds.size.h
 	);
+	window_set_click_config_provider(window, click_config_provider);
 	layer_set_update_proc(s_watch_layer, draw_watchface);
 	layer_mark_dirty(s_watch_layer);
 }
@@ -101,6 +174,11 @@ static void main_window_unload(Window *window) {
 
 int main(void) {
 	APP_LOG(APP_LOG_LEVEL_INFO, "native watchface main entered");
+	s_analog_mode = persist_exists(PERSIST_KEY_ANALOG_MODE) &&
+		persist_read_bool(PERSIST_KEY_ANALOG_MODE);
+	time_t now = time(NULL);
+	struct tm *current_time = localtime(&now);
+	if (current_time) s_current_time = *current_time;
 	s_main_window = window_create();
 	if (!s_main_window) {
 		APP_LOG(APP_LOG_LEVEL_ERROR, "window_create failed");
@@ -111,8 +189,8 @@ int main(void) {
 		.unload = main_window_unload,
 	});
 	window_stack_push(s_main_window, true);
-	tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
-	APP_LOG(APP_LOG_LEVEL_INFO, "second tick subscription requested");
+	tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
+	APP_LOG(APP_LOG_LEVEL_INFO, "minute tick subscription requested");
 	APP_LOG(APP_LOG_LEVEL_INFO, "entering Pebble event loop");
 	app_event_loop();
 	APP_LOG(APP_LOG_LEVEL_INFO, "Pebble event loop exited");

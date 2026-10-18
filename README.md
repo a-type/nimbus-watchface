@@ -2,6 +2,9 @@
 
 A native Pebble C watchface for emery and gabbro.
 
+Press the center Select button to switch between digital and analog time. The
+selected display mode is remembered across launches.
+
 ## Building & running
 
 ```sh
