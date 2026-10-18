@@ -351,7 +351,7 @@ static GColor color_for_pixel(uint8_t color) {
 	if (color == 1) return GColorWhite;
 	if (color == 2) return GColorFromRGB(80, 80, 80);
 	if (color == 4) return GColorFromRGB(50, 50, 50);
-	if (color == SOLID_SHADOW_COLOR) return GColorFromRGB(96, 96, 96);
+	if (color == SOLID_SHADOW_COLOR) return GColorFromRGB(144, 144, 144);
 	return GColorBlack;
 }
 
