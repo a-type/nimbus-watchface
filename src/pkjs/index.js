@@ -20,7 +20,10 @@ Pebble.addEventListener('webviewclosed', function (event) {
 	}
 	if (typeof configData.analog_mode !== 'boolean') return;
 
-	localStorage.setItem('analog_mode', configData.analog_mode ? 'true' : 'false');
+	localStorage.setItem(
+		'analog_mode',
+		configData.analog_mode ? 'true' : 'false'
+	);
 	var message = {};
 	message[messageKeys.ANALOG_MODE] = configData.analog_mode ? 1 : 0;
 	var onMessageSent = function () {
