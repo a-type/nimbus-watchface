@@ -325,10 +325,10 @@ static uint8_t outlined_color(int16_t x, int16_t y) {
 	else if (overlay & OVERLAY_SHADOW) color = 2;
 	else if (overlay & OVERLAY_CONTOUR) color = contour_edge(x, y) ? 4 : 1;
 	if (!color) return 0;
-	for (int8_t dy = -2; dy <= 2; dy++) {
+	for (int8_t dy = -1; dy <= 1; dy++) {
 		const int16_t sample_y = y + dy;
 		if (sample_y < 0 || sample_y >= s_height) return 3;
-		for (int8_t dx = -2; dx <= 2; dx++) {
+		for (int8_t dx = -1; dx <= 1; dx++) {
 			const int16_t sample_x = x + dx;
 			if (sample_x < 0 || sample_x >= s_width || !pixel_occupied(sample_x, sample_y)) return 3;
 		}
