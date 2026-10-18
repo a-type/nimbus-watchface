@@ -28,8 +28,9 @@ static void draw_ray_segment(GContext *context, GPoint start, GPoint endpoint, G
 	graphics_fill_circle(context, endpoint, cap_radius);
 }
 
-static void draw_ray(GContext *context, GPoint center, float angle, int16_t start_radius, int16_t end_radius, uint8_t thickness) {
+static void draw_ray(GContext *context, GPoint center, float angle, int16_t sun_radius, int16_t end_radius, uint8_t thickness) {
 	const int16_t outline_thickness = thickness + 2;
+	const int16_t start_radius = sun_radius + outline_thickness / 2 + 1;
 	const GPoint start = GPoint(
 		center.x + (int16_t)(cosf(angle) * start_radius),
 		center.y + (int16_t)(sinf(angle) * start_radius)
@@ -42,10 +43,10 @@ static void draw_ray(GContext *context, GPoint center, float angle, int16_t star
 	draw_ray_segment(context, start, endpoint, GColorFromRGB(255, 220, 0), thickness);
 }
 
-static void draw_analog_clock(GContext *context, GRect bounds, GPoint center) {
+static void draw_analog_clock(GContext *context, GRect bounds, GPoint center, int16_t sun_radius) {
 	const int16_t screen_size = bounds.size.w < bounds.size.h ? bounds.size.w : bounds.size.h;
 	const int16_t numeral_radius = screen_size / 2 - 14;
-	const GFont numeral_font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+	const GFont numeral_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
 	const float pi = 3.14159265f;
 	graphics_context_set_text_color(context, GColorBlack);
 	for (int8_t hour = 1; hour <= 12; hour++) {
@@ -70,8 +71,8 @@ static void draw_analog_clock(GContext *context, GRect bounds, GPoint center) {
 	const float minute_angle = (float)s_current_time.tm_min * (2.0f * pi / 60.0f) - pi / 2.0f;
 	const float hour_angle = ((float)(s_current_time.tm_hour % 12) + (float)s_current_time.tm_min / 60.0f) *
 		(2.0f * pi / 12.0f) - pi / 2.0f;
-	draw_ray(context, center, hour_angle, screen_size / 6, screen_size / 4, 5);
-	draw_ray(context, center, minute_angle, screen_size / 6, screen_size / 3, 4);
+	draw_ray(context, center, hour_angle, sun_radius, screen_size / 4, 5);
+	draw_ray(context, center, minute_angle, sun_radius, screen_size / 3, 4);
 }
 
 static void draw_watchface(Layer *layer, GContext *context) {
@@ -86,6 +87,9 @@ static void draw_watchface(Layer *layer, GContext *context) {
 	graphics_fill_rect(context, bounds, 0, GCornerNone);
 	graphics_context_set_fill_color(context, GColorFromRGB(255, 220, 0));
 	graphics_fill_circle(context, sun_center, sun_diameter / 2);
+	graphics_context_set_stroke_color(context, GColorBlack);
+	graphics_context_set_stroke_width(context, 1);
+	graphics_draw_circle(context, sun_center, sun_diameter / 2);
 	if (s_cloud_ready) {
 		if (!s_logged_first_draw) APP_LOG(APP_LOG_LEVEL_INFO, "cloud draw started");
 		cloud_draw(context);
@@ -108,10 +112,7 @@ static void draw_watchface(Layer *layer, GContext *context) {
 	}
 
 	if (s_analog_mode) {
-		draw_analog_clock(context, bounds, sun_center);
-		graphics_context_set_stroke_color(context, GColorBlack);
-		graphics_context_set_stroke_width(context, 1);
-		graphics_draw_circle(context, sun_center, sun_diameter / 2);
+		draw_analog_clock(context, bounds, sun_center, sun_diameter / 2);
 		return;
 	}
 
