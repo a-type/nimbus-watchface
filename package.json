@@ -24,10 +24,10 @@
 		"watchapp": {
 			"watchface": true
 		},
-			"capabilities": [
-				"configurable"
-			],
-			"enableMultiJS": true,
+		"capabilities": [
+			"configurable"
+		],
+		"enableMultiJS": true,
 		"messageKeys": [
 			"ANALOG_MODE"
 		],
