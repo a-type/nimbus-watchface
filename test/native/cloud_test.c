@@ -12,7 +12,7 @@
 static GColor s_pixels[TEST_HEIGHT][TEST_WIDTH];
 static GColor s_color;
 static uint32_t s_draw_calls;
-static uint32_t s_color_calls[3];
+static uint32_t s_color_calls[4];
 static bool s_out_of_bounds;
 
 void graphics_context_set_fill_color(GContext *context, GColor color) {
@@ -36,6 +36,7 @@ void graphics_fill_rect(GContext *context, GRect rect, uint16_t radius, uint8_t 
 	if (s_color == GColorWhite) s_color_calls[0]++;
 	else if (s_color == GColorFromRGB(80, 80, 80)) s_color_calls[1]++;
 	else if (s_color == GColorBlack) s_color_calls[2]++;
+	else if (s_color == GColorFromRGB(50, 50, 50)) s_color_calls[3]++;
 }
 
 static void clear_output(void) {
@@ -57,6 +58,7 @@ static void verify_renderer(int16_t width, int16_t height) {
 	assert(s_color_calls[0] > 0);
 	assert(s_color_calls[1] > 0);
 	assert(s_color_calls[2] > 0);
+	assert(s_color_calls[3] > 0);
 	memcpy(expected, s_pixels, sizeof(expected));
 
 	clear_output();
