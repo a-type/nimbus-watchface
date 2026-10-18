@@ -19,18 +19,27 @@ static bool s_logged_first_draw;
 static bool s_analog_mode;
 static struct tm s_current_time;
 
-static void draw_ray(GContext *context, GPoint center, float angle, int16_t length, uint8_t thickness) {
-	const GPoint endpoint = GPoint(
-		center.x + (int16_t)(cosf(angle) * length),
-		center.y + (int16_t)(sinf(angle) * length)
-	);
+static void draw_ray_segment(GContext *context, GPoint start, GPoint endpoint, GColor color, uint8_t thickness) {
 	const int16_t cap_radius = thickness / 2;
-	graphics_context_set_stroke_color(context, GColorFromRGB(255, 220, 0));
+	graphics_context_set_stroke_color(context, color);
 	graphics_context_set_stroke_width(context, thickness);
-	graphics_draw_line(context, center, endpoint);
-	graphics_context_set_fill_color(context, GColorFromRGB(255, 220, 0));
-	graphics_fill_circle(context, center, cap_radius);
+	graphics_draw_line(context, start, endpoint);
+	graphics_context_set_fill_color(context, color);
 	graphics_fill_circle(context, endpoint, cap_radius);
+}
+
+static void draw_ray(GContext *context, GPoint center, float angle, int16_t start_radius, int16_t end_radius, uint8_t thickness) {
+	const int16_t outline_thickness = thickness + 2;
+	const GPoint start = GPoint(
+		center.x + (int16_t)(cosf(angle) * start_radius),
+		center.y + (int16_t)(sinf(angle) * start_radius)
+	);
+	const GPoint endpoint = GPoint(
+		center.x + (int16_t)(cosf(angle) * end_radius),
+		center.y + (int16_t)(sinf(angle) * end_radius)
+	);
+	draw_ray_segment(context, start, endpoint, GColorBlack, outline_thickness);
+	draw_ray_segment(context, start, endpoint, GColorFromRGB(255, 220, 0), thickness);
 }
 
 static void draw_analog_clock(GContext *context, GRect bounds, GPoint center) {
@@ -38,7 +47,7 @@ static void draw_analog_clock(GContext *context, GRect bounds, GPoint center) {
 	const int16_t numeral_radius = screen_size / 2 - 14;
 	const GFont numeral_font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 	const float pi = 3.14159265f;
-	graphics_context_set_text_color(context, GColorFromRGB(255, 220, 0));
+	graphics_context_set_text_color(context, GColorBlack);
 	for (int8_t hour = 1; hour <= 12; hour++) {
 		const float angle = (float)hour * (2.0f * pi / 12.0f) - pi / 2.0f;
 		const GPoint numeral_center = GPoint(
@@ -61,8 +70,8 @@ static void draw_analog_clock(GContext *context, GRect bounds, GPoint center) {
 	const float minute_angle = (float)s_current_time.tm_min * (2.0f * pi / 60.0f) - pi / 2.0f;
 	const float hour_angle = ((float)(s_current_time.tm_hour % 12) + (float)s_current_time.tm_min / 60.0f) *
 		(2.0f * pi / 12.0f) - pi / 2.0f;
-	draw_ray(context, center, hour_angle, screen_size / 4, 5);
-	draw_ray(context, center, minute_angle, screen_size / 3, 4);
+	draw_ray(context, center, hour_angle, screen_size / 6, screen_size / 4, 5);
+	draw_ray(context, center, minute_angle, screen_size / 6, screen_size / 3, 4);
 }
 
 static void draw_watchface(Layer *layer, GContext *context) {
@@ -100,6 +109,9 @@ static void draw_watchface(Layer *layer, GContext *context) {
 
 	if (s_analog_mode) {
 		draw_analog_clock(context, bounds, sun_center);
+		graphics_context_set_stroke_color(context, GColorBlack);
+		graphics_context_set_stroke_width(context, 1);
+		graphics_draw_circle(context, sun_center, sun_diameter / 2);
 		return;
 	}
 
