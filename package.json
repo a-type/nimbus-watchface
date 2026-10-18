@@ -13,7 +13,6 @@
 		"pebble-app"
 	],
 	"private": true,
-	"dependencies": {},
 	"pebble": {
 		"displayName": "Nimbus",
 		"uuid": "6abac4ae-f60b-406d-97ce-fdcdabf7793c",
@@ -25,7 +24,13 @@
 		"watchapp": {
 			"watchface": true
 		},
-		"messageKeys": [],
+			"capabilities": [
+				"configurable"
+			],
+			"enableMultiJS": true,
+		"messageKeys": [
+			"ANALOG_MODE"
+		],
 		"resources": {
 			"media": []
 		}

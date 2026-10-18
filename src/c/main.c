@@ -1,12 +1,16 @@
 #include <pebble.h>
 
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <time.h>
 
 #include "cloud.h"
 
 #define PERSIST_KEY_ANALOG_MODE 0
+#define APP_MESSAGE_BUFFER_SIZE 64
+
+extern uint32_t MESSAGE_KEY_ANALOG_MODE;
 
 static Window *s_main_window;
 static Layer *s_watch_layer;
@@ -101,7 +105,7 @@ static void draw_watchface(Layer *layer, GContext *context) {
 
 	char time_text[16];
 	clock_copy_time_string(time_text, sizeof(time_text));
-	const GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+	const GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
 	const GSize text_size = graphics_text_layout_get_content_size(
 		time_text,
 		font,
@@ -138,17 +142,13 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
 	if (s_watch_layer) layer_mark_dirty(s_watch_layer);
 }
 
-static void handle_select_click(ClickRecognizerRef recognizer, void *context) {
-	(void)recognizer;
+static void inbox_received_handler(DictionaryIterator *iterator, void *context) {
 	(void)context;
-	s_analog_mode = !s_analog_mode;
+	const Tuple *mode_tuple = dict_find(iterator, MESSAGE_KEY_ANALOG_MODE);
+	if (!mode_tuple) return;
+	s_analog_mode = mode_tuple->value->int32 != 0;
 	persist_write_bool(PERSIST_KEY_ANALOG_MODE, s_analog_mode);
 	if (s_watch_layer) layer_mark_dirty(s_watch_layer);
-}
-
-static void click_config_provider(void *context) {
-	(void)context;
-	window_single_click_subscribe(BUTTON_ID_SELECT, handle_select_click);
 }
 
 static void main_window_load(Window *window) {
@@ -162,7 +162,6 @@ static void main_window_load(Window *window) {
 		bounds.size.w,
 		bounds.size.h
 	);
-	window_set_click_config_provider(window, click_config_provider);
 	layer_set_update_proc(s_watch_layer, draw_watchface);
 	layer_mark_dirty(s_watch_layer);
 }
@@ -179,6 +178,14 @@ int main(void) {
 	time_t now = time(NULL);
 	struct tm *current_time = localtime(&now);
 	if (current_time) s_current_time = *current_time;
+	app_message_register_inbox_received(inbox_received_handler);
+	const AppMessageResult message_result = app_message_open(
+		APP_MESSAGE_BUFFER_SIZE,
+		APP_MESSAGE_BUFFER_SIZE
+	);
+	if (message_result != APP_MSG_OK) {
+		APP_LOG(APP_LOG_LEVEL_ERROR, "app message open failed: %d", message_result);
+	}
 	s_main_window = window_create();
 	if (!s_main_window) {
 		APP_LOG(APP_LOG_LEVEL_ERROR, "window_create failed");

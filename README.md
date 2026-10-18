@@ -2,8 +2,9 @@
 
 A native Pebble C watchface for emery and gabbro.
 
-Press the center Select button to switch between digital and analog time. The
-selected display mode is remembered across launches.
+Choose **Analog time** in the Nimbus settings page in the Pebble mobile app to
+switch between digital and analog time. The selected display mode is remembered
+on the watch across launches.
 
 ## Building & running
 
@@ -24,8 +25,13 @@ Alloy targets the modern Pebble hardware: **emery** (Pebble Time 2) and
 src/c/main.c                   Native app lifecycle and clock display
 src/c/cloud.c                  Fractal geometry and scanline cloud renderer
 src/c/cloud.h                  Cloud renderer interface
+src/pkjs/index.js              PebbleKit JS settings flow
+docs/config.html               Hosted analog-time setting
 package.json                   Project metadata (UUID, platforms, resources)
 wscript                        Build rules — usually no need to edit
+Enable GitHub Pages for the repository using the default branch's `docs/`
+folder. The app opens `https://a-type.github.io/nimbus-watchface/config.html`
+for its settings page.
 ```
 
 ## Documentation
