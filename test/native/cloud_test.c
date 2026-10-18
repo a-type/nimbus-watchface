@@ -47,11 +47,11 @@ static void clear_output(void) {
 	s_out_of_bounds = false;
 }
 
-static void verify_renderer(int16_t width, int16_t height) {
+static void verify_renderer(int16_t width, int16_t height, uint32_t seed) {
 	GContext context = {0};
 	GColor expected[TEST_HEIGHT][TEST_WIDTH];
 	clear_output();
-	assert(cloud_init(width, height));
+	assert(cloud_init(width, height, seed));
 	cloud_draw(&context);
 	assert(!s_out_of_bounds);
 	assert(s_draw_calls > 0);
@@ -62,16 +62,22 @@ static void verify_renderer(int16_t width, int16_t height) {
 	memcpy(expected, s_pixels, sizeof(expected));
 
 	clear_output();
-	assert(cloud_init(width, height));
+	assert(cloud_init(width, height, seed));
 	cloud_draw(&context);
 	assert(!s_out_of_bounds);
 	assert(memcmp(expected, s_pixels, sizeof(expected)) == 0);
+
+	clear_output();
+	assert(cloud_init(width, height, seed + 1u));
+	cloud_draw(&context);
+	assert(!s_out_of_bounds);
+	assert(memcmp(expected, s_pixels, sizeof(expected)) != 0);
 }
 
 int main(void) {
-	verify_renderer(200, 228);
-	verify_renderer(228, 228);
-	assert(!cloud_init(TEST_WIDTH + 1, 228));
+	verify_renderer(200, 228, 20261018u);
+	verify_renderer(228, 228, 20261019u);
+	assert(!cloud_init(TEST_WIDTH + 1, 228, 20261018u));
 	puts("native cloud renderer checks passed");
 	return 0;
 }

@@ -81,8 +81,8 @@ static float vertical_shape_influence(
 }
 
 static void generate_lobes(float width, float height, float floor, float root_x,
-	CloudLobe *lobes, float size_multiplier, uint8_t max_depth) {
-	s_random_state = 42;
+	CloudLobe *lobes, float size_multiplier, uint8_t max_depth, uint32_t seed) {
+	s_random_state = seed;
 	const float root_radius = floorf(fminf(width, height) * 0.25f * size_multiplier + 0.5f);
 	lobes[0] = (CloudLobe){root_x, floor - root_radius, root_radius, root_radius, -1.57f};
 	float branch_headings[5];
@@ -124,11 +124,11 @@ static void generate_lobes(float width, float height, float floor, float root_x,
 	}
 }
 
-static void fit_lobes(int16_t width, int16_t height) {
+static void fit_lobes(int16_t width, int16_t height, uint32_t seed) {
 	const float floor = floorf(height * 0.98f + 0.5f);
 	const float root_x = floorf(width * 0.48f + 0.5f);
-	generate_lobes(width, height, floor, root_x, s_lobes, 1.0f, CLOUD_GENERATIONS);
-	generate_lobes(width, height, floor, root_x, s_overlay_lobes, 0.92f, CLOUD_OVERLAY_GENERATIONS);
+	generate_lobes(width, height, floor, root_x, s_lobes, 1.0f, CLOUD_GENERATIONS, seed);
+	generate_lobes(width, height, floor, root_x, s_overlay_lobes, 0.92f, CLOUD_OVERLAY_GENERATIONS, seed);
 	float left = INFINITY;
 	float top = floor - 38.0f;
 	float right = -INFINITY;
@@ -171,13 +171,13 @@ static void fit_lobes(int16_t width, int16_t height) {
 	s_right = (int16_t)fminf(width, ceilf(s_offset_x + (right - left) * s_fit) + 2.0f);
 }
 
-bool cloud_init(int16_t width, int16_t height) {
+bool cloud_init(int16_t width, int16_t height, uint32_t seed) {
 	s_ready = false;
 	if (width <= 0 || width > CLOUD_MAX_WIDTH || height <= 0) return false;
 	s_width = width;
 	s_height = height;
-	fit_lobes(width, height);
-	s_random_state = 43;
+	fit_lobes(width, height, seed);
+	s_random_state = seed + 1u;
 	memset(s_lobe_shaded, 0, sizeof(s_lobe_shaded));
 	for (uint16_t i = s_depth_starts[CLOUD_GENERATIONS - 1]; i < s_depth_ends[CLOUD_GENERATIONS]; i++) {
 		s_lobe_shaded[i] = random_unit() < (2.0f / 3.0f);

@@ -19,6 +19,10 @@ static bool s_logged_first_draw;
 static bool s_analog_mode;
 static struct tm s_current_time;
 
+static uint32_t cloud_seed_for_date(const struct tm *date) {
+	return (uint32_t)date->tm_year * 366u + (uint32_t)date->tm_yday;
+}
+
 static void draw_ray_segment(GContext *context, GPoint start, GPoint endpoint, GColor color, uint8_t thickness) {
 	const int16_t cap_radius = thickness / 2;
 	graphics_context_set_stroke_color(context, color);
@@ -156,7 +160,19 @@ static void draw_watchface(Layer *layer, GContext *context) {
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
 	(void)units_changed;
-	if (tick_time) s_current_time = *tick_time;
+	if (tick_time) {
+		const bool date_changed = tick_time->tm_year != s_current_time.tm_year ||
+			tick_time->tm_yday != s_current_time.tm_yday;
+		s_current_time = *tick_time;
+		if (date_changed && s_watch_layer) {
+			const GRect bounds = layer_get_bounds(s_watch_layer);
+			s_cloud_ready = cloud_init(
+				bounds.size.w,
+				bounds.size.h,
+				cloud_seed_for_date(tick_time)
+			);
+		}
+	}
 	if (s_watch_layer) layer_mark_dirty(s_watch_layer);
 }
 
@@ -172,7 +188,11 @@ static void inbox_received_handler(DictionaryIterator *iterator, void *context) 
 static void main_window_load(Window *window) {
 	s_watch_layer = window_get_root_layer(window);
 	const GRect bounds = layer_get_bounds(s_watch_layer);
-	s_cloud_ready = cloud_init(bounds.size.w, bounds.size.h);
+	s_cloud_ready = cloud_init(
+		bounds.size.w,
+		bounds.size.h,
+		cloud_seed_for_date(&s_current_time)
+	);
 	APP_LOG(
 		s_cloud_ready ? APP_LOG_LEVEL_INFO : APP_LOG_LEVEL_ERROR,
 		"cloud init %s (%d x %d)",
