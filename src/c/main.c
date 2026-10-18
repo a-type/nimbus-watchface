@@ -46,6 +46,8 @@ static void draw_ray(GContext *context, GPoint center, float angle, int16_t sun_
 static void draw_analog_clock(GContext *context, GRect bounds, GPoint center, int16_t sun_radius) {
 	const int16_t screen_size = bounds.size.w < bounds.size.h ? bounds.size.w : bounds.size.h;
 	const int16_t numeral_radius = screen_size / 2 - 14;
+	const int16_t minute_hand_radius = sun_radius + (numeral_radius - sun_radius) / 2;
+	const int16_t hour_hand_radius = sun_radius + (minute_hand_radius - sun_radius) * 3 / 4;
 	const GFont numeral_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
 	const float pi = 3.14159265f;
 	graphics_context_set_text_color(context, GColorBlack);
@@ -71,8 +73,8 @@ static void draw_analog_clock(GContext *context, GRect bounds, GPoint center, in
 	const float minute_angle = (float)s_current_time.tm_min * (2.0f * pi / 60.0f) - pi / 2.0f;
 	const float hour_angle = ((float)(s_current_time.tm_hour % 12) + (float)s_current_time.tm_min / 60.0f) *
 		(2.0f * pi / 12.0f) - pi / 2.0f;
-	draw_ray(context, center, hour_angle, sun_radius, screen_size / 4, 5);
-	draw_ray(context, center, minute_angle, sun_radius, screen_size / 3, 4);
+	draw_ray(context, center, hour_angle, sun_radius, hour_hand_radius, 5);
+	draw_ray(context, center, minute_angle, sun_radius, minute_hand_radius, 4);
 }
 
 static void draw_watchface(Layer *layer, GContext *context) {
